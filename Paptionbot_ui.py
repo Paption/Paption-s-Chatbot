@@ -1,11 +1,7 @@
-
 import threading
 import customtkinter as ctk
 from ollama import chat
 
-# -----------------------------
-# CONFIGURATION
-# -----------------------------
 
 MODEL = "qwen3.5:0.8b"
 
@@ -165,7 +161,17 @@ class PaptionBot(ctk.CTk):
         )
         message_label.pack(anchor="w", padx=5, pady=(3, 0))
 
+        # Scroll to the newest message
+        self.after(50, self.scroll_to_bottom)
+
         return message_label
+
+    def scroll_to_bottom(self):
+        """Scroll the chat area to the newest message."""
+        try:
+            self.chat_area._parent_canvas.yview_moveto(1.0)
+        except Exception:
+            pass
 
     def send_message(self, event=None):
 
@@ -176,35 +182,37 @@ class PaptionBot(ctk.CTk):
 
         self.user_input.delete(0, "end")
 
-        # Display the user's message
+        # Display the user's message in the interface.
         self.add_message("You", user_text)
 
-        # Add to conversation history
-        self.messages.append({
-            "role": "user",
-            "content": user_text,
-        })
+        # Create a temporary history for this request.
+        # The original history is not modified yet.
+        messages_snapshot = self.messages + [
+            {
+                "role": "user",
+                "content": user_text,
+            }
+        ]
 
-        # Take a snapshot of conversation history
-        messages_snapshot = self.messages.copy()
-
-        # Prevent repeated submissions while waiting
+        # Prevent repeated submissions while waiting.
         self.send_button.configure(state="disabled")
         self.user_input.configure(state="disabled")
+
         self.status_label.configure(
             text="Paption is thinking... chill kiasi"
         )
 
-        # Run Ollama in a background thread
+        # Run Ollama in a background thread.
         threading.Thread(
             target=self.get_response,
-            args=(messages_snapshot,),
+            args=(messages_snapshot, user_text),
             daemon=True,
         ).start()
 
         return "break"
 
-    def get_response(self, messages_snapshot):
+    def get_response(self, messages_snapshot, user_text):
+        """Request a response without modifying history prematurely."""
 
         try:
             response = chat(
@@ -212,35 +220,71 @@ class PaptionBot(ctk.CTk):
                 messages=messages_snapshot,
             )
 
-            answer = response.message.content or "No response received."
+            answer = (response.message.content or "").strip()
 
+            if not answer:
+                self.after(
+                    0,
+                    lambda: self.display_response(
+                        "The model returned an empty response. "
+                        "Please try again.",
+                        is_error=True,
+                    ),
+                )
+                return
+
+            # Send the successful response and original user message
+            # to the main thread for display and history updates.
             self.after(
                 0,
-                lambda: self.display_response(answer),
+                lambda: self.display_response(
+                    answer,
+                    user_text=user_text,
+                    is_error=False,
+                ),
             )
 
         except Exception as error:
 
-            error_message = str(error)
+            error_message = (
+                "Paption is experiencing a problem:\n"
+                f"{error}\n\n"
+                "Please check that Ollama is installed, running, "
+                f"and that the model '{MODEL}' is available."
+            )
 
             self.after(
                 0,
-                lambda: self.display_response(
-                    f"Paption is experiencing a problem:\n{error_message}"
+                lambda message=error_message: self.display_response(
+                    message,
+                    is_error=True,
                 ),
             )
 
-    def display_response(self, answer):
+    def display_response(
+        self,
+        answer,
+        user_text=None,
+        is_error=False,
+    ):
+        """Display a reply and save only successful exchanges."""
 
         self.add_message("Paption", answer)
 
-        # Save successful AI responses to conversation history
-        if not answer.startswith("Paption is experiencing a problem:"):
+        if not is_error and user_text is not None:
+
+            # Save both messages only after a successful response.
+            self.messages.append({
+                "role": "user",
+                "content": user_text,
+            })
+
             self.messages.append({
                 "role": "assistant",
                 "content": answer,
             })
 
+        # Re-enable the interface.
         self.send_button.configure(state="normal")
         self.user_input.configure(state="normal")
         self.user_input.focus_set()
