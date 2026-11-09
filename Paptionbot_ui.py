@@ -1,13 +1,28 @@
 import threading
 import customtkinter as ctk
-from ollama import chat
 
+from ollama import chat
+from PIL import Image
+from pathlib import Path
+
+
+# ==========================================
+# CONFIGURATION
+# ==========================================
 
 MODEL = "qwen3.5:0.8b"
 
-ctk.set_appearance_mode("light")
+BASE_DIR = Path(__file__).resolve().parent
+LOGO_PATH = BASE_DIR / "paption_logo_updated.png"
+ICON_PATH = BASE_DIR / "paption_icon_updated.ico"
+
+ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
 
+
+# ==========================================
+# PAPTION BOT APPLICATION
+# ==========================================
 
 class PaptionBot(ctk.CTk):
 
@@ -18,280 +33,387 @@ class PaptionBot(ctk.CTk):
         self.geometry("1000x700")
         self.minsize(600, 450)
 
+        if ICON_PATH.exists():
+            self.iconbitmap(str(ICON_PATH))
+
         # Conversation history
         self.messages = [
             {
                 "role": "system",
                 "content": (
-                    "You are Paption Bot, a friendly and helpful AI "
-                    "assistant. Answer clearly and concisely."
-                ),
+                    "You are Paption Bot, a friendly and helpful "
+                    "AI assistant. Answer clearly and concisely."
+                )
             }
         ]
 
-        self.create_interface()
+        # ==================================
+        # HEADER
+        # ==================================
 
-    def create_interface(self):
-
-        # Header
-        self.header = ctk.CTkFrame(
+        self.header_frame = ctk.CTkFrame(
             self,
-            fg_color="#FFFFFF",
+            height=85,
             corner_radius=0,
-            height=70,
+            fg_color="#202020"
         )
-        self.header.pack(fill="x")
-        self.header.pack_propagate(False)
 
+        self.header_frame.pack(fill="x")
+        self.header_frame.pack_propagate(False)
+
+        # Logo
+        if LOGO_PATH.exists():
+
+            self.logo_image = ctk.CTkImage(
+                light_image=Image.open(LOGO_PATH),
+                dark_image=Image.open(LOGO_PATH),
+                size=(70, 70)
+            )
+
+            self.logo_label = ctk.CTkLabel(
+                self.header_frame,
+                image=self.logo_image,
+                text=""
+            )
+
+            self.logo_label.pack(
+                side="left",
+                padx=15,
+                pady=5
+            )
+
+        # Title
         self.title_label = ctk.CTkLabel(
-            self.header,
-            text="PAPTION",
-            font=("Arial", 24, "bold"),
-            text_color="#111111",
+            self.header_frame,
+            text="Paption Bot",
+            font=("Arial", 22, "bold"),
+            text_color="#FFFFFF"
         )
-        self.title_label.pack(side="left", padx=25, pady=15)
 
-        self.subtitle = ctk.CTkLabel(
-            self.header,
-            text="AI ASSISTANT",
-            font=("Arial", 11),
-            text_color="#777777",
+        self.title_label.pack(
+            side="left",
+            padx=10
         )
-        self.subtitle.pack(side="left", padx=5, pady=20)
 
-        # Chat area
+        # Status
+        self.status_label = ctk.CTkLabel(
+            self.header_frame,
+            text="Powered by Ollama",
+            font=("Arial", 12),
+            text_color="#A0A0A0"
+        )
+
+        self.status_label.pack(
+            side="right",
+            padx=20
+        )
+
+        # ==================================
+        # CHAT AREA
+        # ==================================
+
         self.chat_area = ctk.CTkScrollableFrame(
             self,
-            fg_color="#F5F5F5",
-            corner_radius=0,
+            fg_color="#171717",
+            corner_radius=0
         )
+
         self.chat_area.pack(
             fill="both",
             expand=True,
             padx=0,
-            pady=0,
+            pady=0
         )
 
         # Welcome message
         self.add_message(
             "Paption",
-            "Rada Rada! Welcome to Paption Bot. How can I help you today?",
+            "Hello! I'm Paption Bot. How can I help you today?"
         )
 
-        # Input section
+        # ==================================
+        # INPUT AREA
+        # ==================================
+
         self.input_frame = ctk.CTkFrame(
             self,
-            fg_color="#FFFFFF",
+            fg_color="#202020",
             corner_radius=0,
+            height=85
         )
-        self.input_frame.pack(fill="x", padx=0, pady=0)
 
-        self.user_input = ctk.CTkEntry(
-            self.input_frame,
-            placeholder_text="Message Paption...",
-            height=45,
-            font=("Arial", 14),
-            fg_color="#F2F2F2",
-            text_color="#111111",
-            border_color="#DDDDDD",
+        self.input_frame.pack(
+            fill="x",
+            side="bottom"
         )
-        self.user_input.pack(
+
+        self.input_frame.pack_propagate(False)
+
+        # Message entry
+        self.message_entry = ctk.CTkEntry(
+            self.input_frame,
+            placeholder_text="Message Paption Bot...",
+            height=45,
+            corner_radius=20,
+            fg_color="#303030",
+            text_color="#FFFFFF",
+            border_color="#454545",
+            font=("Arial", 14)
+        )
+
+        self.message_entry.pack(
             side="left",
             fill="x",
             expand=True,
             padx=(20, 10),
-            pady=15,
+            pady=18
         )
 
-        self.user_input.bind("<Return>", self.send_message)
+        self.message_entry.bind(
+            "<Return>",
+            self.send_message
+        )
 
+        # Send button
         self.send_button = ctk.CTkButton(
             self.input_frame,
             text="Send",
-            width=80,
+            width=90,
             height=45,
-            fg_color="#111111",
-            hover_color="#333333",
+            corner_radius=20,
+            fg_color="#8B5CF6",
+            hover_color="#7C3AED",
             text_color="#FFFFFF",
-            command=self.send_message,
-        )
-        self.send_button.pack(
-            side="right",
-            padx=(0, 20),
-            pady=15,
+            command=self.send_message
         )
 
-        # Status
-        self.status_label = ctk.CTkLabel(
-            self,
-            text="Powered by Ollama",
-            font=("Arial", 10),
-            text_color="#888888",
+        self.send_button.pack(
+            side="right",
+            padx=(5, 20),
+            pady=18
         )
-        self.status_label.pack(pady=(0, 8))
+
+        self.message_entry.focus()
+
+    # ==========================================
+    # MESSAGE DISPLAY
+    # ==========================================
 
     def add_message(self, sender, message):
 
-        # Message container
-        container = ctk.CTkFrame(
+        is_user = sender == "You"
+
+        row = ctk.CTkFrame(
             self.chat_area,
-            fg_color="transparent",
+            fg_color="transparent"
         )
-        container.pack(fill="x", padx=15, pady=8)
 
-        # Sender label
+        row.pack(
+            fill="x",
+            padx=20,
+            pady=8
+        )
+
+        bubble_color = "#34304A" if is_user else "#262626"
+        alignment = "e" if is_user else "w"
+
+        bubble = ctk.CTkFrame(
+            row,
+            fg_color=bubble_color,
+            corner_radius=16
+        )
+
+        bubble.pack(
+            anchor=alignment,
+            padx=5
+        )
+
         sender_label = ctk.CTkLabel(
-            container,
+            bubble,
             text=sender,
-            font=("Arial", 12, "bold"),
-            text_color="#111111",
-            anchor="w",
+            font=("Arial", 11, "bold"),
+            text_color="#B7A6FF",
+            anchor="w"
         )
-        sender_label.pack(anchor="w", padx=5)
 
-        # Message text
+        sender_label.pack(
+            anchor="w",
+            padx=12,
+            pady=(8, 0)
+        )
+
         message_label = ctk.CTkLabel(
-            container,
+            bubble,
             text=message,
             font=("Arial", 14),
-            text_color="#222222",
+            text_color="#FFFFFF",
             justify="left",
             anchor="w",
-            wraplength=650,
+            wraplength=650
         )
-        message_label.pack(anchor="w", padx=5, pady=(3, 0))
 
-        # Scroll to the newest message
-        self.after(50, self.scroll_to_bottom)
+        message_label.pack(
+            anchor="w",
+            padx=12,
+            pady=(3, 8)
+        )
+
+        self.after(
+            100,
+            lambda: self.chat_area._parent_canvas.yview_moveto(1.0)
+        )
 
         return message_label
 
-    def scroll_to_bottom(self):
-        """Scroll the chat area to the newest message."""
-        try:
-            self.chat_area._parent_canvas.yview_moveto(1.0)
-        except Exception:
-            pass
+    # ==========================================
+    # SEND MESSAGE
+    # ==========================================
 
     def send_message(self, event=None):
 
-        user_text = self.user_input.get().strip()
+        user_text = self.message_entry.get().strip()
 
         if not user_text:
-            return "break"
+            return
 
-        self.user_input.delete(0, "end")
+        self.message_entry.delete(0, "end")
 
-        # Display the user's message in the interface.
         self.add_message("You", user_text)
 
-        # Create a temporary history for this request.
-        # The original history is not modified yet.
-        messages_snapshot = self.messages + [
-            {
-                "role": "user",
-                "content": user_text,
-            }
-        ]
+        self.messages.append({
+            "role": "user",
+            "content": user_text
+        })
 
-        # Prevent repeated submissions while waiting.
+        messages_snapshot = list(self.messages)
+
+        self.message_entry.configure(state="disabled")
         self.send_button.configure(state="disabled")
-        self.user_input.configure(state="disabled")
 
         self.status_label.configure(
-            text="Paption is thinking... chill kiasi"
+            text="Paption is thinking..."
         )
 
-        # Run Ollama in a background thread.
+        response_label = self.add_message(
+            "Paption",
+            " "
+        )
+
         threading.Thread(
             target=self.get_response,
-            args=(messages_snapshot, user_text),
-            daemon=True,
+            args=(messages_snapshot, response_label),
+            daemon=True
         ).start()
 
-        return "break"
+    # ==========================================
+    # OLLAMA RESPONSE
+    # ==========================================
 
-    def get_response(self, messages_snapshot, user_text):
-        """Request a response without modifying history prematurely."""
+    def get_response(self, messages_snapshot, response_label):
+
+        answer = ""
 
         try:
+
             response = chat(
                 model=MODEL,
                 messages=messages_snapshot,
+                stream=True,
+                think=False,
+                keep_alive="10m",
+                options={
+                    "num_predict": 150
+                }
             )
 
-            answer = (response.message.content or "").strip()
+            for chunk in response:
 
-            if not answer:
-                self.after(
-                    0,
-                    lambda: self.display_response(
-                        "The model returned an empty response. "
-                        "Please try again.",
-                        is_error=True,
-                    ),
-                )
-                return
+                content = chunk.message.content or ""
 
-            # Send the successful response and original user message
-            # to the main thread for display and history updates.
+                if content:
+
+                    answer += content
+
+                    self.after(
+                        0,
+                        self.append_chunk,
+                        response_label,
+                        answer
+                    )
+
+            if not answer.strip():
+                raise RuntimeError("No response received from the model.")
+
             self.after(
                 0,
-                lambda: self.display_response(
-                    answer,
-                    user_text=user_text,
-                    is_error=False,
-                ),
+                self.display_response,
+                answer,
+                True
             )
 
         except Exception as error:
 
             error_message = (
-                "Paption is experiencing a problem:\n"
-                f"{error}\n\n"
-                "Please check that Ollama is installed, running, "
-                f"and that the model '{MODEL}' is available."
+                f"Paption is experiencing a problem: {error}"
             )
 
             self.after(
                 0,
-                lambda message=error_message: self.display_response(
-                    message,
-                    is_error=True,
-                ),
+                self.append_chunk,
+                response_label,
+                error_message
             )
 
-    def display_response(
-        self,
-        answer,
-        user_text=None,
-        is_error=False,
-    ):
-        """Display a reply and save only successful exchanges."""
+            self.after(
+                0,
+                self.display_response,
+                error_message,
+                False
+            )
 
-        self.add_message("Paption", answer)
+    # ==========================================
+    # UPDATE STREAMING MESSAGE
+    # ==========================================
 
-        if not is_error and user_text is not None:
+    def append_chunk(self, response_label, answer):
 
-            # Save both messages only after a successful response.
-            self.messages.append({
-                "role": "user",
-                "content": user_text,
-            })
+        response_label.configure(text=answer)
+
+        self.chat_area._parent_canvas.yview_moveto(1.0)
+
+    # ==========================================
+    # FINISH RESPONSE
+    # ==========================================
+
+    def display_response(self, answer, success=True):
+
+        if success:
 
             self.messages.append({
                 "role": "assistant",
-                "content": answer,
+                "content": answer
             })
 
-        # Re-enable the interface.
+        else:
+
+            if self.messages and self.messages[-1]["role"] == "user":
+                self.messages.pop()
+
+        self.message_entry.configure(state="normal")
         self.send_button.configure(state="normal")
-        self.user_input.configure(state="normal")
-        self.user_input.focus_set()
 
-        self.status_label.configure(text="Powered by Ollama")
+        self.status_label.configure(
+            text="Powered by Ollama"
+        )
 
+        self.message_entry.focus()
+
+
+# ==========================================
+# RUN APPLICATION
+# ==========================================
 
 if __name__ == "__main__":
+
     app = PaptionBot()
     app.mainloop()
