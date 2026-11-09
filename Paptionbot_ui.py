@@ -6,9 +6,7 @@ from PIL import Image
 from pathlib import Path
 
 
-# ==========================================
 # CONFIGURATION
-# ==========================================
 
 MODEL = "qwen3.5:0.8b"
 
@@ -20,9 +18,7 @@ ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
 
 
-# ==========================================
 # PAPTION BOT APPLICATION
-# ==========================================
 
 class PaptionBot(ctk.CTk):
 
@@ -47,9 +43,7 @@ class PaptionBot(ctk.CTk):
             }
         ]
 
-        # ==================================
         # HEADER
-        # ==================================
 
         self.header_frame = ctk.CTkFrame(
             self,
@@ -108,9 +102,7 @@ class PaptionBot(ctk.CTk):
             padx=20
         )
 
-        # ==================================
         # CHAT AREA
-        # ==================================
 
         self.chat_area = ctk.CTkScrollableFrame(
             self,
@@ -131,9 +123,7 @@ class PaptionBot(ctk.CTk):
             "Hello! I'm Paption Bot. How can I help you today?"
         )
 
-        # ==================================
         # INPUT AREA
-        # ==================================
 
         self.input_frame = ctk.CTkFrame(
             self,
@@ -195,9 +185,7 @@ class PaptionBot(ctk.CTk):
 
         self.message_entry.focus()
 
-    # ==========================================
     # MESSAGE DISPLAY
-    # ==========================================
 
     def add_message(self, sender, message):
 
@@ -265,9 +253,7 @@ class PaptionBot(ctk.CTk):
 
         return message_label
 
-    # ==========================================
     # SEND MESSAGE
-    # ==========================================
 
     def send_message(self, event=None):
 
@@ -305,9 +291,7 @@ class PaptionBot(ctk.CTk):
             daemon=True
         ).start()
 
-    # ==========================================
     # OLLAMA RESPONSE
-    # ==========================================
 
     def get_response(self, messages_snapshot, response_label):
 
@@ -371,9 +355,7 @@ class PaptionBot(ctk.CTk):
                 False
             )
 
-    # ==========================================
     # UPDATE STREAMING MESSAGE
-    # ==========================================
 
     def append_chunk(self, response_label, answer):
 
@@ -381,9 +363,7 @@ class PaptionBot(ctk.CTk):
 
         self.chat_area._parent_canvas.yview_moveto(1.0)
 
-    # ==========================================
     # FINISH RESPONSE
-    # ==========================================
 
     def display_response(self, answer, success=True):
 
@@ -409,9 +389,7 @@ class PaptionBot(ctk.CTk):
         self.message_entry.focus()
 
 
-# ==========================================
 # RUN APPLICATION
-# ==========================================
 
 if __name__ == "__main__":
 
